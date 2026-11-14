@@ -6,6 +6,6 @@
     "build": "node build.js"
   },
   "dependencies": {
-    "js-confuser": "^1.6.0"
+    "js-confuser": "^2.1.3"
   }
 }
