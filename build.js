@@ -25,15 +25,17 @@ async function main() {
   }
   console.log(`待混淆核心代码大小: ${(code.length / 1024).toFixed(2)} KB`);
 
-  // 3. 执行 js-confuser 混淆
-  console.log('2. 正在执行 js-confuser 深度混淆...');
+  // 3. 执行 js-confuser 深度混淆
+  // 注意：必须关闭 deadCode，否则会注入 Node.js 模板 (如 require('big-integer')) 导致 Cloudflare Pages 打包失败
+  console.log('2. 正在执行 js-confuser 深度混淆 (兼容 Cloudflare Pages esbuild 打包)...');
   const t0 = Date.now();
   const obfuscated = await jsConfuser.obfuscate(code, {
     target: 'browser',
     preset: 'medium',
     pack: false,
-    stringEncoding: true,
-    renameVariables: true
+    deadCode: false,        // 禁用注入 Node.js 依赖型死代码
+    stringEncoding: true,   // 开启字符串深度扰乱
+    renameVariables: true   // 开启变量重命名
   });
   const confusedCode = typeof obfuscated === 'string' ? obfuscated : obfuscated.code;
   console.log(`混淆完成，耗时: ${Date.now() - t0}ms，代码大小: ${(confusedCode.length / 1024).toFixed(2)} KB`);
