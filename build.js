@@ -25,17 +25,21 @@ async function main() {
   }
   console.log(`待混淆核心代码大小: ${(code.length / 1024).toFixed(2)} KB`);
 
-  // 3. 执行 js-confuser 深度混淆
-  // 注意：必须关闭 deadCode，否则会注入 Node.js 模板 (如 require('big-integer')) 导致 Cloudflare Pages 打包失败
-  console.log('2. 正在执行 js-confuser 深度混淆 (兼容 Cloudflare Pages esbuild 打包)...');
+  // 3. 执行 js-confuser 精准混淆：
+  // 核心原则：保留 stringEncoding (防扫) + renameVariables (防指纹)，彻底关闭 controlFlowFlattening/calculator/dispatcher (防 10ms CPU 熔断)
+  console.log('2. 正在执行 js-confuser 精准防扫混淆 (纳秒级流转发性能)...');
   const t0 = Date.now();
   const obfuscated = await jsConfuser.obfuscate(code, {
     target: 'browser',
-    preset: 'medium',
+    renameVariables: true,        // 开启变量重命名
+    stringEncoding: true,         // 开启字符串深度扰乱 (核心防扫)
     pack: false,
-    deadCode: false,        // 禁用注入 Node.js 依赖型死代码
-    stringEncoding: true,   // 开启字符串深度扰乱
-    renameVariables: true   // 开启变量重命名
+    deadCode: false,              // 禁用死代码注入，保持纯净环境
+    controlFlowFlattening: false, // 关闭控制流平坦化，彻底杜绝 10ms CPU 超限
+    opaquePredicates: false,      // 关闭伪分支计算
+    calculator: false,            // 关闭算术函数包装，保持原生位运算与 JIT
+    dispatcher: false,            // 关闭动态分发包装，保持直通调用
+    minify: true
   });
   const confusedCode = typeof obfuscated === 'string' ? obfuscated : obfuscated.code;
   console.log(`混淆完成，耗时: ${Date.now() - t0}ms，代码大小: ${(confusedCode.length / 1024).toFixed(2)} KB`);
